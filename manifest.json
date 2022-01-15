@@ -1,0 +1,29 @@
+{
+    "name": "collection cleaner",
+    "description": "你的收藏清理工，提醒你删除收藏，真的学会了",
+    "version": "1.0",
+    "manifest_version": 3,
+    "background": {
+        "service_worker": "background.js"
+    },
+    "permissions": ["activeTab", "storage", "tabs", "notifications"],
+    "action": {
+        "default_popup": "popup.html",
+        "default_icon": {
+            "16": "assets/images/get_started16.png",
+            "32": "assets/images/get_started32.png",
+            "48": "assets/images/get_started48.png",
+            "128": "assets/images/get_started128.png"
+        }
+    },
+    "commands": {
+        "_execute_action": {
+          "suggested_key": {
+            "default": "Ctrl+Shift+F",
+            "mac": "MacCtrl+Shift+F"
+          },
+          "description": "open collection cleaner"
+        }
+    },
+    "homepage_url": "https://juejin.cn/user/2796746683217534/posts"
+}
