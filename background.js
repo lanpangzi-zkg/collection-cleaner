@@ -1,20 +1,7 @@
-chrome.tabs.onUpdated.addListener((_, { status }, tab) => {
-    if (status === 'complete') {
-        activeArticleQueue.add(tab.url);
-    }
-});
-chrome.tabs.onActivated.addListener(({ tabId }) => {
-    chrome.tabs.get(tabId, (tab) => {
-        if (tab && !tab.url.startsWith('chrome://')) {
-            activeArticleQueue.add(tab.url);
-        }
-    });
-});
 const activeArticleQueue = new Set();
 let cacheTags = null;
 let readyCollectArticles = []; // 即将被清理的
-// const readyCollectOffsetTime = 864e5; // 文章销毁的截止时间<=一天将提示用户
-const readyCollectOffsetTime = 3e4;
+const readyCollectOffsetTime = 864e5; // 文章销毁的截止时间<=一天将提示用户
 
 let fetchDataSuccess = false;
 let fetchCallback = null;
@@ -46,7 +33,6 @@ function updateArticles() {
             const _articles = articles.reduce((arr, article) => {
                 const { deadline } = article;
                 if (deadline > currentTime) {
-                    article.deadline -= loopGapTime;
                     if (deadline - currentTime <= readyCollectOffsetTime) {
                         article.readyCollected = true;
                         readyCollectArticles.push(article);
@@ -85,20 +71,38 @@ function showNotifications(message) {
         iconUrl: './assets/images/get_started128.png',
     });
 }
-chrome.runtime.onMessage.addListener(
-    function(request, _, sendResponse) {
-        if (request.type === 'fetchTags') {
-            if (fetchDataSuccess) {
-                sendResponse(cacheTags);
-            } else {
-                fetchCallback = sendResponse;
-            }
-            return;
-        }
-        if (request.type === 'syncData') { // popup.html修改了数据，需要同步到background
-            chrome.storage.sync.set({ tags: request.data }, () => {
-                cacheTags = request.data;
-            });
-        }
+
+chrome.tabs.onUpdated.addListener((_, { status }, tab) => {
+    if (status === 'complete') {
+        activeArticleQueue.add(tab.url);
     }
-);
+});
+chrome.tabs.onActivated.addListener(({ tabId }) => {
+    chrome.tabs.get(tabId, (tab) => {
+        if (tab && !tab.url.startsWith('chrome://')) {
+            activeArticleQueue.add(tab.url);
+        }
+    });
+});
+
+chrome.notifications.onClicked.addListener(() => {
+    chrome.action.setPopup({
+        popup: './popup.html'
+    });
+});
+
+chrome.runtime.onMessage.addListener((request, _, sendResponse) => {
+    if (request.type === 'fetchTags') {
+        if (fetchDataSuccess) {
+            sendResponse(cacheTags);
+        } else {
+            fetchCallback = sendResponse;
+        }
+        return;
+    }
+    if (request.type === 'syncData') { // popup.html修改了数据，需要同步到background
+        chrome.storage.sync.set({ tags: request.data }, () => {
+            cacheTags = request.data;
+        });
+    }
+});

@@ -186,9 +186,10 @@ svg, svg>* {
 }
 .article-list ul li {
     position: relative;
-    padding: 15px 0;
+    padding: 15px 5px;
     font-size: 14px;
-    box-shadow: 3px 1px 4px 0px #dbdbdb;
+    box-shadow: 0 0 4px 1px #efefef;
+    transition: all 0.2s;
 }
 .article-list ul li + li {
     margin-top: 15px;
@@ -201,8 +202,12 @@ svg, svg>* {
     line-height: 1;
     display: none;
     cursor: pointer;
+    font-size: 16px;
 }
-.article-list:hover .article-delete {
+.article-item:hover {
+    box-shadow: 0 0 4px 1px #dbdbdb;
+}
+.article-item:hover .article-delete {
     display: initial;
     color: #1890ff;
 }
@@ -248,9 +253,9 @@ svg, svg>* {
     top: -1px;
 }
 .collect-count-down {
-    color: red;
+    color: #fb5e22;
     font-size: 12px;
-    margin: 8px 0;
+    margin-left: 10px;
 }
 .hidden {
     display: none !important;

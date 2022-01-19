@@ -174,7 +174,7 @@ function bindEvents() {
                 return;
             }
             const id = Date.now();
-            const deadline = Date.now() + 6048e5;
+            const deadline = id + 864e5; // 默认保存7天 6048e5
             const articleNode = queryParentElement(target, 'article-item');
             articleNode.setAttribute('id', `a-${id}`);
             const { tagId } = articleNode.dataset;
@@ -189,7 +189,6 @@ function bindEvents() {
                     deadline,
                 });
             }
-            console.log(globalTags, tagId);
             let nextNode = parentNode;
             while((nextNode = nextNode.nextElementSibling)) {
                 if (nextNode.classList.contains('title')) {
@@ -365,7 +364,7 @@ function createArticleNode(data, isEdit, tagId) {
             <button class="btn small m-l-5 article-cancel">取消</button>
         </div>
         <a class="title${isEdit ? ' hidden' : ''}" target="_blank" rel="noopener noreferrer" href="${url}">${title}</a>
-        ${readyCollected ? `<div class="collect-count-down">清理计时：<span class="remainSeconds">${transferDeadline(deadline)}</span></div>}` : ''}
+        ${readyCollected ? `<span class="collect-count-down">🕗 <span class="remainSeconds">${transferDeadline(deadline)}</span></span>` : ''}
         <i class="article-delete${isEdit ? ' hidden' : ''}" data-id="${id}" data-tag-id="${tagId}">
             <svg viewBox="0 0 1024 1024" width="1em" height="1em" fill="currentColor">
                 <path d="M504.224 470.288l207.84-207.84a16 16 0 0 1 22.608 0l11.328 11.328a16 16 0 0 1 0 22.624l-207.84 207.824 207.84 207.84a16 16 0 0 1 0 22.608l-11.328 11.328a16 16 0 0 1-22.624 0l-207.824-207.84-207.84 207.84a16 16 0 0 1-22.608 0l-11.328-11.328a16 16 0 0 1 0-22.624l207.84-207.824-207.84-207.84a16 16 0 0 1 0-22.608l11.328-11.328a16 16 0 0 1 22.624 0l207.824 207.84z" p-id="4167"></path>
@@ -375,48 +374,45 @@ function createArticleNode(data, isEdit, tagId) {
     return newArticleNode;
 }
 function transferDeadline(deadline) {
-    const hours = Math.floor(deadline / 36e5);
-    const mins =  Math.floor((deadline % 36e5) / 6e4);
-    const seconds = deadline % 6e4;
+    const restTime = Math.floor((deadline - Date.now()) / 1000); // 转换成秒
+    const hours = Math.floor(restTime / 3600);
+    const mins =  Math.floor((restTime % 3600) / 60);
+    const seconds = restTime % 60;
     return `${fillDigit(hours)}:${fillDigit(mins)}:${fillDigit(seconds)}`;
 }
 function fillDigit(s) {
     return s != null && s === s && `0${s}`.slice(-2);
 }
-let count = 0;
 function collectionLooper() {
     setTimeout(() => {
         querySelectorAll('.article-list>ul').forEach((listNode) => {
             const { tagId } = listNode.dataset;
-            const tagDataSource = globalTags.find(({ id }) => {
-                return id === tagId;
+            const tagDataSource = globalTags?.find(({ id }) => {
+                return id == tagId;
             });
-            if (tagDataSource?.articles) {
-                tagDataSource.articles.forEach((item) => {
-                    item.deadline -= 1000;
-                    const articleNode = listNode.querySelector(`#a-${item.id}`);
-                    if (!articleNode) {
-                        return;
+            tagDataSource?.articles?.forEach((item) => {
+                const articleNode = listNode.querySelector(`#a-${item.id}`);
+                if (!articleNode) {
+                    return;
+                }
+                const { deadline } = item;
+                const restTime = deadline - Date.now();
+                if (restTime <= 0) { // 文章已经过期，删除
+                    articleNode.remove();
+                } else if (restTime <= 864e5) { // 即将过期
+                    let countDownNode = articleNode.querySelector('.collect-count-down');
+                    if (!countDownNode) {
+                        countDownNode = document.createElement('span');
+                        countDownNode.className = 'collect-count-down';
+                        countDownNode.innerHTML = `🕗 <span class="remainSeconds"></span>`;
+                        articleNode.insertBefore(countDownNode, articleNode.querySelector('.article-delete'));
                     }
-                    if (item.deadline <= 0) { // 文章已经过期，删除
-                        articleNode.remove();
-                    } else if (item.deadline <= 3e4) { // 即将过期
-                        let countDownNode = articleNode.querySelector('.collect-count-down');
-                        if (!countDownNode) {
-                            countDownNode = document.createElement('div');
-                            countDownNode.className = 'collect-count-down';
-                            countDownNode.innerHTML = `清理计时：<span class="remainSeconds"></span>`;
-                            articleNode.insertBefore(countDownNode, articleNode.querySelector('.article-delete'));
-                        }
-                        countDownNode.querySelector('.remainSeconds').innerText = transferDeadline(item.deadline);
-                    }
-                });
-            }
+                    countDownNode.querySelector('.remainSeconds').innerText = transferDeadline(deadline);
+                }
+            });
             checkArticlesIsEmpty(listNode);
         });
-        if (count++ < 10) {
-            collectionLooper();
-        }
+        collectionLooper();
     }, 1000);
 }
 function fetchTags() {
@@ -443,6 +439,7 @@ function renderData() {
         })
         tagListNode.appendChild(fragment);
         checkTagIsEmpty();
+        collectionLooper();
     }
 }
 
